@@ -61,6 +61,10 @@ def control_arg():
         print sys.argv[1], u" n'est pas un dossier."
         sys.exit ()
 
+
+
+####### lancement autonome
+
 if __name__ == '__main__':
     control_arg()
     liste = listrepertoire(sys.argv[1])

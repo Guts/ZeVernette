@@ -5,6 +5,8 @@
 ##from tkFileDialog import askdirectory
 import sys
 from checkdobles import *
+from xlwt import Workbook, easyxf, Font, XFStyle, Formula  # écriture excel 2003
+from expexcel import *
 
 ##### Programme principal #######
 
@@ -68,12 +70,14 @@ else:
     sys.exit ()
 
 
+####### Export en onglets Excel
 
+wb = Workbook(encoding='utf8')
 
+DoblExcel(wb, fichiers[idx][0], doublons)
 
-
-
-
+# sauvegarde de la fiche excel
+wb.save("bubbles.xls")
 
 ####### Import des librairies #######
 ##
