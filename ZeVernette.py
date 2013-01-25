@@ -35,6 +35,7 @@ fichiers.sort() # ordonne la liste
 # Extrait les numéros de hash md5
 hashs = [h[5] for h in fichiers]
 hashs.sort()    # ordonne la liste des numéros de hash
+
 # Crée une liste de hashs unique
 unikhashs = set(hashs)  # supprime les doublons de la liste des hashs
 
@@ -49,12 +50,15 @@ doublons = []
 for idx, elt in enumerate(hashs):
     u""" boucle sur la liste des hashs indexée numériquement (enumerate) """
     try:
+        # on compare les hashs des fichiers un par un
         if elt == hashs[idx + 1]:
+            # si les deux hashs sont égaux, on ajoute les fichiers à liste
             doublons.append((fichiers[idx][1], fichiers[idx + 1][1]))
     except:
-        # end of list
+        # fin de la liste
         pass
 
+# si la liste des doublons contient quelque-chose, on publie la liste paire par paire
 if len(doublons):
     print u"Ces fichiers sont identiques:",
     for d in doublons:
