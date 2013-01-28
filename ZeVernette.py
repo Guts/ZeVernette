@@ -3,10 +3,98 @@
 
 ##from Tkinter import Tk
 ##from tkFileDialog import askdirectory
+import os
 import sys
-from checkdobles import *
+import glob
+import hashlib
 from xlwt import Workbook, easyxf, Font, XFStyle, Formula  # écriture excel 2003
 from expexcel import *
+
+
+#### Fonctions
+
+def compfichiers(nfc1, nfc2, lgbuf=32*1024):
+    u""" Compare les 2 fichiers et renvoie True seulement s'ils ont un \
+    contenu identique """
+    f1 = f2 = None
+    result = False
+    try:
+        if os.path.getsize(nfc1) == os.path.getsize(nfc2):
+            f1 = open(nfc1, "rb")
+            f2 = open(nfc2, "rb")
+            while True:
+                buf1 = f1.read(lgbuf)
+                if len(buf1) == 0:
+                    result = True
+                    break
+                buf2 = f2.read(lgbuf)
+                if buf1 != buf2:
+                    break
+            f1.close()
+            f2.close()
+    except:
+        if f1 != None: f1.close()
+        if f2 != None: f2.close()
+        raise IOError
+    return result
+
+def md5_fichier(fichier, block_size=2**20):
+    u""" Calcule la signature numérique md5 d'un fichier """
+    md5 = hashlib.md5() # instance md5
+    # boucle de test de calculs pour éviter les erreurs
+    with open(fichier, 'r') as fd:
+        try:
+            while True:
+                data = fd.read(block_size)
+                if not data:
+                    break
+                md5.update(data)
+        except Exception, why:
+            print u"Erreur dans le fichier {0}. Raison : {1}".format(f, why)
+            return None
+
+    return md5.hexdigest()
+
+def listrepertoire(path, extension='*'):
+    u""" liste les fichiers de l'extension spécifiée
+    d'un répertoire et sous-répertoires """
+    fichiers = []   # liste des tuples de fichiers
+    dossiers = []   # liste des tuples de dossiers
+    l = glob.glob(os.path.join(path, '*'))  # liste des dossiers et fichiers
+    for i in l:
+        if os.path.isdir(i):
+            u""" si c'est un dossier... """
+##            dossiers += 1   # incrémente le compteur des dossiers...
+            # calcule la taille totale des fichiers contenus dans le dossier
+            dossize_ = sum([os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f)])
+            dossiers.append((os.path.basename(i), i, dossize_))
+            # et ajoute à la liste les fichiers selon l'extension donnée
+            l.extend(glob.glob(os.path.join(i, extension)))
+        else:
+            u""" si c'est un fichier... """
+            name_ = os.path.basename(i)     # nom
+            size_ = os.path.getsize(i)      # taille
+            cdate_ = os.path.getctime(i)    # date de création
+            mdate_ = os.path.getmtime(i)    # date de dernière modification
+            hash_ =  md5_fichier(i)         # calcule son md5
+            if hash_ is not None:           # si le calcul du md5 réussit ...
+                # ... => ajoute fichier et métadonnées à liste globale
+                fichiers.append((name_, i, size_, cdate_, mdate_, hash_))
+    # Information des éléments traités
+    print u"Vérification de {0} fichiers dans {1} dossiers".format(len(fichiers),
+                                                                   len(dossiers))
+    return fichiers, dossiers
+
+def control_arg():
+    if len(sys.argv) != 2 :
+        print u"Argument ou paramètre manquant ou incorrect"
+        sys.exit ()
+    if not (os.path.isdir(sys.argv[1])):
+        print sys.argv[1], u" n'est pas un dossier."
+        sys.exit ()
+
+
+
 
 ##### Programme principal #######
 
@@ -21,7 +109,7 @@ from expexcel import *
 ##    cibler.destroy()
 ##    exit()
 
-chemin = r'D:\A_Ordenar\Julien\python\Zevernette\test_doublons'
+chemin = os.getcwd() + r'/test_doublons'
 
 # Extension
 extension = '*'
@@ -78,33 +166,4 @@ DoblExcel(wb, fichiers[idx][0], doublons)
 
 # sauvegarde de la fiche excel
 wb.save("bubbles.xls")
-
-####### Import des librairies #######
-##
-##from tkFileDialog import askdirectory as doss_cible
-##from os import walk, path
-##
-####### Définition fonctions #######
-##
-##def ubiquite(dossier):
-##    u"""Liste les shapes contenus dans un répertoire et
-##    ses sous-répertoires"""
-##    global liste_shapes
-##    for root, dirs, files in walk(chemin_dossier):
-##        for i in files:
-##            if path.splitext(path.join(root, i))[1] == u'.shp' and \
-##            path.isfile(path.join(root, i)[:-4] + u'.dbf') and \
-##            path.isfile(path.join(root, i)[:-4] + u'.shx') and \
-##            path.isfile(path.join(root, i)[:-4] + u'.prj'):
-##                liste_shapes.append(path.join(root, i))
-##    return liste_shapes
-##
-##
-####### Variables #######
-##
-##
-##
-
-
-
 

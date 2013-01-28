@@ -27,12 +27,12 @@ class DoblExcel:
     def premiere_ligne(self, onglet):
         u""" crée la première ligne de l'onglet """
         self.onglet.write(0, 0, 'Nom', self.entete)
-        self.onglet.write(1, 0, 'Chemin', self.entete)
-        self.onglet.write(2, 0, 'Taille', self.entete)
-        self.onglet.write(3, 0, 'Création', self.entete)
-        self.onglet.write(4, 0, 'Dernière modification', self.entete)
-        self.onglet.write(5, 0, 'Signature md5', self.entete)
-        self.onglet.write(6, 0, 'Probabilité', self.entete)
+        self.onglet.write(0, 1, 'Chemin', self.entete)
+        self.onglet.write(0, 2, 'Taille', self.entete)
+        self.onglet.write(0, 3, 'Création', self.entete)
+        self.onglet.write(0, 4, 'Dernière modification', self.entete)
+        self.onglet.write(0, 5, 'Signature md5', self.entete)
+        self.onglet.write(0 ,6, 'Probabilité', self.entete)
         # fin fonction
         return onglet
 
