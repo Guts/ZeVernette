@@ -38,22 +38,7 @@ def compfichiers(nfc1, nfc2, lgbuf=32*1024):
         raise IOError
     return result
 
-def md5_fichier(fichier, block_size=2**20):
-    u""" Calcule la signature numérique md5 d'un fichier """
-    md5 = hashlib.md5() # instance md5
-    # boucle de test de calculs pour éviter les erreurs
-    with open(fichier, 'r') as fd:
-        try:
-            while True:
-                data = fd.read(block_size)
-                if not data:
-                    break
-                md5.update(data)
-        except Exception, why:
-            print u"Erreur dans le fichier {0}. Raison : {1}".format(f, why)
-            return None
 
-    return md5.hexdigest()
 
 def listrepertoire(path, extension='*'):
     u""" liste les fichiers de l'extension spécifiée
