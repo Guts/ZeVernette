@@ -3,13 +3,16 @@
 from __future__ import unicode_literals
 #-------------------------------------------------------------------------------
 # Name:         Hashing Shapefiles
-# Purpose:      Calculate a numeric signature on a shapefiles (.shp + .dbf + .prj)
+# Purpose:      Calculate a numeric print on :
+#                   - shapefiles (.shp + .dbf + .prj)
+#                   - tables MapInfo (.tab + .dat + .map)
+#                   - folders
 #
 # Author:       Julien Moura (https://github.com/Guts/)
 #
 # Python:       2.7.x
 # Created:      19/12/2012
-# Updated:      20/02/2013
+# Updated:      03/06/2014
 #
 # Licence:      GPL 3
 #-------------------------------------------------------------------------------
@@ -20,59 +23,13 @@ from __future__ import unicode_literals
 # Standard library
 import hashlib
 from multiprocessing import Process, Queue, TimeoutError
-from os import path, walk
+from os import path, walk, listdir
+from datetime import datetime
 import sys
 
 ################################################################################
 ########### Functions #############
 ###################################
-
-def md5_fichier(fichier, block_size=2**20):
-    u""" Calcule la signature numérique md5 d'un fichier """
-    md5 = hashlib.md5() # instance md5
-    # boucle de test de calculs pour éviter les erreurs
-    with open(fichier, 'r') as fd:
-        try:
-            while True:
-                data = fd.read(block_size)
-                if not data:
-                    break
-                md5.update(data)
-        except Exception, why:
-            print(u"Erreur dans le fichier {0}. Raison : {1}".format(f, why))
-            return None
-    # end of function
-    return md5.hexdigest()
-
-def listrepertoire(path, extension='*'):
-    u""" liste les fichiers de l'extension spécifiée
-    d'un répertoire et sous-répertoires """
-    fichiers = []   # liste des tuples de fichiers
-    dossiers = []   # liste des tuples de dossiers
-    l = glob.glob(os.path.join(path, '*'))  # liste des dossiers et fichiers
-    for i in l:
-        if os.path.isdir(i):
-            u""" si c'est un dossier... """
-##            dossiers += 1   # incrémente le compteur des dossiers...
-            # calcule la taille totale des fichiers contenus dans le dossier
-            dossize_ = sum([os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f)])
-            dossiers.append((os.path.basename(i), i, dossize_))
-            # et ajoute à la liste les fichiers selon l'extension donnée
-            l.extend(glob.glob(os.path.join(i, extension)))
-        else:
-            u""" si c'est un fichier... """
-            name_ = os.path.basename(i)     # nom
-            size_ = os.path.getsize(i)      # taille
-            cdate_ = os.path.getctime(i)    # date de création
-            mdate_ = os.path.getmtime(i)    # date de dernière modification
-            hash_ =  md5_fichier(i)         # calcule son md5
-            if hash_ is not None:           # si le calcul du md5 réussit ...
-                # ... => ajoute fichier et métadonnées à liste globale
-                fichiers.append((name_, i, size_, cdate_, mdate_, hash_))
-    # Information des éléments traités
-    print(u"Vérification de {0} fichiers dans {1} dossiers".format(len(fichiers), len(dossiers)))
-    return fichiers, dossiers
-
 
 def li_geofiles(foldertarget=".", shps_list=[], tabs_list=[], gdirs_list=[]):
     u""" List shapefiles and MapInfo files (.tab, not .mid/mif) contained
@@ -114,7 +71,12 @@ def li_geofiles(foldertarget=".", shps_list=[], tabs_list=[], gdirs_list=[]):
 
 
 def sign_shp(shapefile, block_size=2**20):
-    u""" Calcule la signature numérique md5 d'un fichier """
+    u""" compute a tuple of shapefiles hashs. Tuple structure:
+    [0] = hash of *.shp data (sha256)
+    [1] = hash of *.dbf data (sha256)
+    [2] = hash of *.prj data (sha256)
+    [3] = global hash (sha256) : filename (without extension) + [0],[1],[2]
+    """
     # local variables
     shps_files = (shapefile, shapefile[:-4] + '.dbf', shapefile[:-4] + '.prj')
     shps_signs = []
@@ -134,7 +96,7 @@ def sign_shp(shapefile, block_size=2**20):
                     sha_local.update(data)
                     sha_glob.update(data)
             except Exception, why:
-                print(u"Erreur dans le fichier {0}. Raison : {1}".format(f, why))
+                print(u"Error in the file {0}. Reason: {1}".format(f, why))
                 return None
         shps_signs.append(sha_local.hexdigest())
         print("{0} == {1}".format(shp, sha_local.hexdigest()))
@@ -143,11 +105,16 @@ def sign_shp(shapefile, block_size=2**20):
     print("Total: {}\n".format(sha_glob.hexdigest()))
     shps_signs.append(sha_glob.hexdigest())
     # end of function
-    return shps_signs
+    return tuple(shps_signs)
 
 
 def sign_tab(tab, block_size=2**20):
-    u""" Calcule la signature numérique md5 d'un fichier """
+    u""" compute a tuple of MapInfo table hashs. Tuple structure:
+    [0] = hash of *.tab data (sha256)
+    [1] = hash of *.dat data (sha256)
+    [2] = hash of *.map data (sha256)
+    [3] = global hash (sha256) : filename (without extension) + [0],[1],[2]
+    """
     # local variables
     tabs_files = (tab, tab[:-4] + '.DAT', tab[:-4] + '.MAP')
     tabs_signs = []
@@ -167,7 +134,7 @@ def sign_tab(tab, block_size=2**20):
                     sha_local.update(data)
                     sha_glob.update(data)
             except Exception, why:
-                print(u"Erreur dans le fichier {0}. Raison : {1}".format(f, why))
+                print(u"Error in the file {0}. Reason: {1}".format(f, why))
                 return None
         tabs_signs.append(sha_local.hexdigest())
         print("{0} == {1}".format(tab, sha_local.hexdigest()))
@@ -176,8 +143,69 @@ def sign_tab(tab, block_size=2**20):
     print("Total: {}\n".format(sha_glob.hexdigest()))
     tabs_signs.append(sha_glob.hexdigest())
     # end of function
-    return tabs_signs
+    return tuple(tabs_signs)
 
+
+def sign_dir(folderpath):
+    u""" compute a tuple of a directory hash and specifications. Tuple structure:
+    [0] = hash of folder name (sha256)
+    [1] = hash of folder path (without name) (sha256)
+    [2] = folder size (cumulated)
+    [3] = folder creation date
+    [4] = folder last update date
+    [5] = global hash (sha256) : [0],[1],[2] hashed,[3] hashed,[4] hashed
+    """
+    # variables
+    gdirs_signs = []
+    # instance de hashing en 256 bits
+
+    # updating with the directory name
+    sha_loc_name = hashlib.sha256()
+    sha_loc_name.update(path.basename(folderpath))
+    gdirs_signs.append(sha_loc_name.hexdigest())
+
+    # updating with the directory path
+    sha_loc_path = hashlib.sha256()
+    sha_loc_path.update(folderpath[:-len(path.basename(folderpath))])
+    gdirs_signs.append(sha_loc_path.hexdigest())
+
+    # getting folder specifications
+    dossize = sum([path.getsize(path.join(folderpath, f)) for f in listdir(folderpath) if path.isfile(path.join(folderpath, f))])
+    date_crea = path.getctime(folderpath)
+    date_updt = path.getmtime(folderpath)
+
+    # adding to the final tuple
+    gdirs_signs.append(dossize)
+    gdirs_signs.append(date_crea)
+    gdirs_signs.append(date_updt)
+
+    # pretty print
+    print("\n{0} = {1}. It's been created on {2} and lately updated on {3}.".format(folderpath, \
+                                                                           sizeof_fmt(dossize),
+                                                                           datetime.fromtimestamp(int(date_crea)).strftime('%Y-%m-%d %H:%M:%S'), 
+                                                                           datetime.fromtimestamp(int(date_updt)).strftime('%Y-%m-%d %H:%M:%S')))
+
+    # global hash
+    sha_glob = hashlib.sha256()
+    sha_glob.update(path.basename(folderpath))
+    sha_glob.update(folderpath[:-len(path.basename(folderpath))])
+    sha_glob.update(unicode(dossize))
+    sha_glob.update(unicode(date_crea))
+    sha_glob.update(unicode(date_updt))
+    gdirs_signs.append(sha_glob.hexdigest())
+    # end of function
+    return tuple(gdirs_signs)
+
+
+def sizeof_fmt(num):
+    u""" one of the various snippets found ont the Web to get
+    human readable version of files sizes.
+    see: http://stackoverflow.com/a/1094933"""
+    for x in ['bytes','KB','MB','GB']:
+        if num < 1024.0 and num > -1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+    return "%3.1f %s" % (num, 'TB')
 
 ################################################################################
 ###### Stand alone program ########
@@ -201,6 +229,11 @@ if __name__ == '__main__':
     # signing tables MapInfo
     for tab in li_tab:
         sign_tab(tab)
+
+    # signing folders containing geo datas
+    for folder in li_geofolders:
+        sign_dir(folder)
+
 
     # liste.sort()
     # hashs = [h[0] for h in liste]
